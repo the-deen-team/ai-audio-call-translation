@@ -7,6 +7,8 @@ import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 
+const NGROK_URL = "https://0200-2603-8000-5700-29d-5d61-8878-cc33-4c9.ngrok-free.app";
+
 export default function Call() {
   const peerConnectionRef = useRef(null);
   const socketRef = useRef(null);
@@ -18,8 +20,10 @@ export default function Call() {
   const [audioLevel, setAudioLevel] = useState(0);
 
   useEffect(() => {
-    // Initialize socket connection
-    socketRef.current = io("/api/signal");
+    // Initialize socket connection using ngrok URL
+    socketRef.current = io(NGROK_URL, {
+      path: "/api/signal/socket.io", // Ensure this matches your server's socket.io path
+    });
 
     // Setup WebRTC
     peerConnectionRef.current = new RTCPeerConnection({
