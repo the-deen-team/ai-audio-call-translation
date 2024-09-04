@@ -1,4 +1,26 @@
-import { Inter } from "next/font/google";
+'use client';
+
+//Updated with clerk
+
+import { ClerkProvider } from '@clerk/nextjs';
+import { SWRConfig } from 'swr';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <ClerkProvider frontendApi={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+          <SWRConfig value={{ /* your SWR config */ }}>
+            {children}
+          </SWRConfig>
+        </ClerkProvider>
+      </body>
+    </html>
+  );
+}
+
+//PREVIOUS CODE
+/*import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -14,4 +36,4 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>{children}</body>
     </html>
   );
-}
+}*/
