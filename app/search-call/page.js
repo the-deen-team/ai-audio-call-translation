@@ -2,11 +2,12 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import { Typography } from "@mui/material";
-import Avatar from '@mui/joy/Avatar';
-import List from '@mui/joy/List';
-import ListDivider from '@mui/joy/ListDivider';
-import ListItem from '@mui/joy/ListItem';
-import ListItemDecorator from '@mui/joy/ListItemDecorator';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import StarIcon from '@mui/icons-material/Star';
 
 export default function FormPropsTextFields() {
   return (
@@ -32,29 +33,27 @@ export default function FormPropsTextFields() {
 
       {/* Avatar List */}
       <div>
-        {['Users'].map((inset) => (
-          <div key={inset}>
-            <Typography level="body-xs" sx={{ mb: 2 }}>
-              <code>{`placement="${inset}"`}</code>
-            </Typography>
-            <List variant="outlined" sx={{ minWidth: 240, borderRadius: 'sm' }}>
-              <ListItem>
-                <ListItemDecorator>
-                  <Avatar size="sm" src="https://via.placeholder.com/150" />
-                </ListItemDecorator>
-                Mabel Boyle
-              </ListItem>
-              <ListItem>
-                <ListItemDecorator>
-                  <Avatar size="sm" src="https://via.placeholder.com/150" />
-                </ListItemDecorator>
-                Boyd Burt
-              </ListItem>
-            </List>
-          </div>
-        ))}
+        <List
+          sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
+          aria-label="contacts"
+        >
+          <ListItem disablePadding>
+            <ListItemButton>
+              <ListItemIcon>
+                <StarIcon />
+              </ListItemIcon>
+              <ListItemText primary="Chelsea Otakan" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton>
+              <ListItemText inset primary="Eric Hoffman" />
+            </ListItemButton>
+          </ListItem>
+        </List>
       </div>
     </Box>
   );
 }
+
 
