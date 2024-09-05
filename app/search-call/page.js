@@ -32,7 +32,7 @@ export default function FormPropsTextFields() {
 
       {/* Avatar List */}
       <div>
-        {['gutter', 'startDecorator'].map((inset) => (
+        {['Users'].map((inset) => (
           <div key={inset}>
             <Typography level="body-xs" sx={{ mb: 2 }}>
               <code>{`placement="${inset}"`}</code>
@@ -44,7 +44,6 @@ export default function FormPropsTextFields() {
                 </ListItemDecorator>
                 Mabel Boyle
               </ListItem>
-              <ListDivider inset={inset} />
               <ListItem>
                 <ListItemDecorator>
                   <Avatar size="sm" src="https://via.placeholder.com/150" />
