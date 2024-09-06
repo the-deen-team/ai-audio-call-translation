@@ -37,7 +37,9 @@ export default function FormPropsTextFields() {
           sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
           aria-label="contacts"
         >
-          <ListItem disablePadding>
+          <ListItem 
+            sx={{ border: '1px solid #ddd', borderRadius: '4px', mb: 1 }} // Adds border and margin
+          >
             <ListItemButton>
               <ListItemIcon>
                 <StarIcon />
@@ -45,7 +47,9 @@ export default function FormPropsTextFields() {
               <ListItemText primary="Chelsea Otakan" />
             </ListItemButton>
           </ListItem>
-          <ListItem disablePadding>
+          <ListItem 
+            sx={{ border: '1px solid #ddd', borderRadius: '4px' }} // Adds border and border-radius
+          >
             <ListItemButton>
               <ListItemText inset primary="Eric Hoffman" />
             </ListItemButton>
@@ -55,5 +59,3 @@ export default function FormPropsTextFields() {
     </Box>
   );
 }
-
-
