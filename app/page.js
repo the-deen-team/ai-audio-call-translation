@@ -1,12 +1,4 @@
 "use client";
-import {
-  AppBar,
-  Box,
-  Button,
-  Container,
-  Toolbar,
-  Typography,
-} from "@mui/material";
 import { useRouter } from "next/navigation";
 import { ClerkProvider, SignedIn, SignedOut, SignIn } from "@clerk/nextjs";
 import Link from "next/link";
@@ -19,43 +11,30 @@ export default function Home() {
   };
 
   return (
-    <Container maxWidth="100vw">
-      <AppBar position="static" sx={{ backgroundColor: "#3f51b5" }}>
-        <Toolbar>
-          <Typography
-            variant="h6"
-            sx={{
-              flexGrow: 1,
-            }}
-          >
-            AI Audio Call Translator
-          </Typography>
-          <Button color="inherit">
-            <Link href="/sign-in" passHref>
+    <div className="w-full">
+      <header className="bg-blue-600">
+        <nav className="container mx-auto p-4 flex justify-between items-center">
+          <h1 className="text-white text-lg font-bold">AI Audio Call Translator</h1>
+          <div className="flex gap-4">
+            <Link href="/sign-in" className="text-white hover:underline">
               Login
             </Link>
-          </Button>
-          <Button color="inherit">
-            <Link href="/sign-up" passHref>
+            <Link href="/sign-up" className="text-white hover:underline">
               Sign Up
             </Link>
-          </Button>
-        </Toolbar>
-      </AppBar>
-    <Box
-      display="flex"
-      flexDirection="column"
-      width="100vw"
-      height="100vh"
-      alignItems="center"
-      justifyContent="center"
-      gap={3}
-    >
-      <Typography variant="h3">AI Audio Call Translation</Typography>
-      <Button variant="contained" color="primary" onClick={handleStartCall}>
-        Call
-      </Button>
-    </Box>
-    </Container>
+          </div>
+        </nav>
+      </header>
+
+      <main className="flex flex-col items-center justify-center w-full h-screen gap-6">
+        <h2 className="text-3xl font-bold">AI Audio Call Translation</h2>
+        <button
+          className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition"
+          onClick={handleStartCall}
+        >
+          Call
+        </button>
+      </main>
+    </div>
   );
 }

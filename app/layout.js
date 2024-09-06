@@ -1,9 +1,17 @@
 'use client';
 
 //Updated with clerk
-
+import { JetBrains_Mono } from "next/font/google";
+import "./globals.css";
 import { ClerkProvider } from '@clerk/nextjs';
 import { SWRConfig } from 'swr';
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800"],
+  variable: '--font-jetbrainsMono'
+});
+
 
 export default function RootLayout({ children }) {
   return (
