@@ -183,6 +183,45 @@ export default function Call() {
     });
   };
 
+  // Send audio to API (for Speech-to-Text)
+  const sendAudioToAPI = async (audioBlob) => {
+    const formData = new FormData();
+    formData.append("audio", audioBlob);
+
+    try {
+      const response = await fetch("/api/listen", {
+        method: "POST",
+        body: audioBlob, // Send the raw binary audio data
+        headers: {
+          "Content-Type": "application/octet-stream", // Indicate that raw binary data is being sent
+        },
+      });
+      const data = await response.json();
+      console.log("Transcription:", data.transcription);
+    } catch (error) {
+      console.error("Error sending audio to API:", error);
+    }
+  };
+
+  // Record audio function
+  const recordAudio = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+
+    let chunks = [];
+    mediaRecorder.ondataavailable = (event) => {
+      chunks.push(event.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(chunks, { type: "audio/wav" });
+      sendAudioToAPI(audioBlob);
+    };
+
+    mediaRecorder.start();
+    setTimeout(() => mediaRecorder.stop(), 5000); // Record for 5 seconds
+  };
+
   // Toggle microphone
   const toggleMic = () => {
     const audioTrack = localStreamRef.current?.getAudioTracks()[0];
@@ -264,6 +303,9 @@ export default function Call() {
         <TextField inputRef={callInputRef} placeholder="Enter Call ID" />
         <Button variant="contained" color="primary" onClick={answerCall}>
           Answer Call
+        </Button>
+        <Button variant="contained" color="primary" onClick={recordAudio}>
+          Record and Transcribe Audio
         </Button>
       </Box>
 
