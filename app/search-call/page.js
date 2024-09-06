@@ -1,4 +1,6 @@
+
 "use client";
+
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
@@ -11,10 +13,20 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import StarIcon from '@mui/icons-material/Star';
 
-// Load environment variables from .env
-//require('dotenv').config();
+import * as dotenv from 'dotenv'
 
-import { clerkClient } from '@clerk/clerk-sdk-node'; // Import the client directly
+dotenv.config()
+//import { Clerk } from '@clerk/clerk-sdk-node';
+
+
+//import { clerkClient } from '@clerk/clerk-sdk-node'; // Import the client directly
+//const finder = clerkClient(process.env.CLERK_SECRET_KEY);
+//const Clerk = require('@clerk/clerk-sdk-node').Clerk;
+//const clerkClient = new Clerk({ apiKey: process.env.CLERK_SECRET_KEY });
+
+import { createClerkClient } from '@clerk/clerk-sdk-node'
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
 
 
 export default function FormPropsTextFields() {
