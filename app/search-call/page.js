@@ -1,4 +1,8 @@
+
+"use client";
+
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import { Typography } from "@mui/material";
@@ -9,7 +13,48 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import StarIcon from '@mui/icons-material/Star';
 
+import * as dotenv from 'dotenv'
+
+dotenv.config()
+//import { Clerk } from '@clerk/clerk-sdk-node';
+
+
+//import { clerkClient } from '@clerk/clerk-sdk-node'; // Import the client directly
+//const finder = clerkClient(process.env.CLERK_SECRET_KEY);
+//const Clerk = require('@clerk/clerk-sdk-node').Clerk;
+//const clerkClient = new Clerk({ apiKey: process.env.CLERK_SECRET_KEY });
+
+import { createClerkClient } from '@clerk/clerk-sdk-node'
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+
+
 export default function FormPropsTextFields() {
+  const [userList, setUserList] = useState([]);
+  const [loading, setLoading] = useState(true); // Add loading state for debugging
+  const [error, setError] = useState(null);     // Add error state for debugging
+
+  useEffect(() => {
+    // Fetch user list from Clerk
+    async function fetchUsers() {
+      try {
+        const users = await clerkClient.users.getUserList({
+          limit: 10,
+          orderBy: '-created_at',
+        });
+        console.log("Fetched users: ", users); // Debug: log users
+        setUserList(users);
+      } catch (error) {
+        console.error('Failed to fetch users:', error); // Debug: log error
+        setError(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUsers();
+  }, []);
+
   return (
     <Box
       component="form"
@@ -44,31 +89,28 @@ export default function FormPropsTextFields() {
         />
       </Box>
 
-      {/* Avatar List */}
-      <div>
-        <List
-          sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
-          aria-label="contacts"
-        >
+      {/* User List */}
+      {loading && <Typography variant="h6">Loading users...</Typography>}
+      {error && <Typography variant="h6" color="error">Error loading users: {error.message}</Typography>}
+
+      <List
+        sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
+        aria-label="contacts"
+      >
+        {userList.map((user) => (
           <ListItem 
+            key={user.id} 
             sx={{ border: '1px solid #ddd', borderRadius: '4px', mb: 1 }}
           >
             <ListItemButton>
               <ListItemIcon>
                 <StarIcon />
               </ListItemIcon>
-              <ListItemText primary="Chelsea Otakan" />
+              <ListItemText primary={user.firstName + ' ' + user.lastName} />
             </ListItemButton>
           </ListItem>
-          <ListItem 
-            sx={{ border: '1px solid #ddd', borderRadius: '4px' }}
-          >
-            <ListItemButton>
-              <ListItemText inset primary="Eric Hoffman" />
-            </ListItemButton>
-          </ListItem>
-        </List>
-      </div>
+        ))}
+      </List>
     </Box>
   );
 }
