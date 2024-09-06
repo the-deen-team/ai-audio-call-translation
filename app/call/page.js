@@ -20,7 +20,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 export default function Call() {
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
-  const remoteStreamRef = useRef(new MediaStream());
+  const remoteStreamRef = useRef(null);
   const remoteAudioRef = useRef(null); // Ref for the remote audio element
   const callInputRef = useRef(null);
 
@@ -31,6 +31,11 @@ export default function Call() {
   const [callCreated, setCallCreated] = useState(false); // To display the ID box
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Ensure MediaStream is only accessed in the browser
+      remoteStreamRef.current = new MediaStream();
+    }
+
     // Initialize PeerConnection
     peerConnectionRef.current = new RTCPeerConnection({
       iceServers: [
