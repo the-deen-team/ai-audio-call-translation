@@ -21,22 +21,24 @@ export default function Call() {
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
-  const remoteAudioRef = useRef(null); // Ref for the remote audio element
+  const remoteAudioRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const callInputRef = useRef(null);
+  const recorderRef = useRef(null);
+  const audioBufferTimeoutRef = useRef(null);
 
   const [micEnabled, setMicEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioLevel, setAudioLevel] = useState(0);
-  const [callId, setCallId] = useState(""); // State to store the call ID
-  const [callCreated, setCallCreated] = useState(false); // To display the ID box
+  const [callId, setCallId] = useState("");
+  const [callCreated, setCallCreated] = useState(false);
 
   useEffect(() => {
+    // Ensure MediaStream is only accessed in the browser
     if (typeof window !== "undefined") {
-      // Ensure MediaStream is only accessed in the browser
       remoteStreamRef.current = new MediaStream();
     }
 
-    // Initialize PeerConnection
     peerConnectionRef.current = new RTCPeerConnection({
       iceServers: [
         { urls: "stun:stun1.l.google.com:19302" },
@@ -44,14 +46,13 @@ export default function Call() {
       ],
     });
 
-    // Handle remote audio stream and attach it to the <audio> element
     peerConnectionRef.current.ontrack = (event) => {
       event.streams[0].getTracks().forEach((track) => {
         remoteStreamRef.current.addTrack(track);
       });
+
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStreamRef.current;
-        remoteAudioRef.current.play(); // Autoplay the remote audio
       }
     };
 
@@ -66,50 +67,100 @@ export default function Call() {
         audio: true,
       });
 
-      // Add local audio track to the peer connection
       localStreamRef.current.getTracks().forEach((track) => {
         peerConnectionRef.current.addTrack(track, localStreamRef.current);
       });
 
-      // Monitor audio levels
-      const audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
-      const analyser = audioContext.createAnalyser();
-      const source = audioContext.createMediaStreamSource(
-        localStreamRef.current
-      );
-      source.connect(analyser);
-      analyser.fftSize = 256;
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const updateAudioLevel = () => {
-        analyser.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-        setAudioLevel(average);
-        requestAnimationFrame(updateAudioLevel);
-      };
-      updateAudioLevel();
+      console.log("Audio stream started successfully");
+      monitorAudioLevel();
+      recordAudio();
     } catch (error) {
       console.error("Error accessing microphone:", error);
     }
   };
 
+  const recordAudio = () => {
+    recorderRef.current = new MediaRecorder(localStreamRef.current, {
+      mimeType: "audio/webm",
+      audioBitsPerSecond: 48000,
+    });
+
+    recorderRef.current.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunksRef.current.push(event.data);
+        console.log("Audio chunk size:", event.data.size);
+      }
+    };
+
+    recorderRef.current.start(5000);
+  };
+
+  const sendAudioToAPI = async (audioChunks) => {
+    console.log("Preparing to send audio to API...");
+
+    if (audioChunks.length === 0) {
+      console.error("No audio data to send");
+      return;
+    }
+
+    const blob = new Blob(audioChunks, { type: "audio/webm" });
+    const audioBuffer = await blob.arrayBuffer();
+
+    console.log("Blob size:", blob.size);
+    console.log("Audio buffer byteLength:", audioBuffer.byteLength);
+
+    if (audioBuffer.byteLength === 0) {
+      console.error("Audio buffer is empty");
+      return;
+    }
+
+    try {
+      console.log("Sending audio to API, buffer size:", audioBuffer.byteLength);
+
+      const response = await fetch("/api/listen", {
+        method: "POST",
+        headers: { "Content-Type": "audio/webm" },
+        body: audioBuffer,
+      });
+
+      const { transcription } = await response.json();
+      console.log("Transcription received:", transcription);
+    } catch (error) {
+      console.error("Error sending audio to API:", error);
+    }
+  };
+
+  const detectSilenceAndSendAudio = () => {
+    if (audioBufferTimeoutRef.current) {
+      clearTimeout(audioBufferTimeoutRef.current);
+    }
+
+    audioBufferTimeoutRef.current = setTimeout(() => {
+      console.log("Checking audio chunks before sending...");
+
+      if (audioChunksRef.current.length > 0) {
+        console.log("Audio chunks available:", audioChunksRef.current.length);
+        sendAudioToAPI([...audioChunksRef.current]);
+        audioChunksRef.current = [];
+      } else {
+        console.log("No audio chunks available, skipping API call");
+      }
+    }, 1000);
+  };
+
   const createOffer = async () => {
     await startAudio();
 
-    // Create a new document in the "calls" collection
-    const callDocRef = doc(collection(firestore, "calls")); // Automatically generate a new document with an ID
+    const callDocRef = doc(collection(firestore, "calls"));
     const offerCandidates = collection(callDocRef, "offerCandidates");
     const answerCandidates = collection(callDocRef, "answerCandidates");
 
-    setCallId(callDocRef.id); // Store the call ID in state
-    setCallCreated(true); // Show the call ID box
+    setCallId(callDocRef.id);
+    setCallCreated(true);
 
     peerConnectionRef.current.onicecandidate = (event) => {
       if (event.candidate) {
-        addDoc(offerCandidates, event.candidate.toJSON()); // Add ICE candidate to offerCandidates subcollection
+        addDoc(offerCandidates, event.candidate.toJSON());
       }
     };
 
@@ -121,10 +172,8 @@ export default function Call() {
       type: offerDescription.type,
     };
 
-    // Set the offer in Firestore under the same call document
     await setDoc(callDocRef, { offer });
 
-    // Listen for the answer
     onSnapshot(callDocRef, (snapshot) => {
       const data = snapshot.data();
       if (data?.answer) {
@@ -133,7 +182,6 @@ export default function Call() {
       }
     });
 
-    // Listen for answer candidates
     onSnapshot(answerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
@@ -149,7 +197,6 @@ export default function Call() {
 
     await startAudio();
 
-    // Reference the existing document in the "calls" collection using the callId
     const callDocRef = doc(firestore, "calls", callId);
     const offerCandidates = collection(callDocRef, "offerCandidates");
     const answerCandidates = collection(callDocRef, "answerCandidates");
@@ -161,7 +208,6 @@ export default function Call() {
     };
 
     const callData = (await getDoc(callDocRef)).data();
-
     const offerDescription = callData.offer;
     await peerConnectionRef.current.setRemoteDescription(
       new RTCSessionDescription(offerDescription)
@@ -172,7 +218,6 @@ export default function Call() {
 
     await updateDoc(callDocRef, { answer: answerDescription });
 
-    // Listen for offer candidates
     onSnapshot(offerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
@@ -183,46 +228,6 @@ export default function Call() {
     });
   };
 
-  // Send audio to API (for Speech-to-Text)
-  const sendAudioToAPI = async (audioBlob) => {
-    const formData = new FormData();
-    formData.append("audio", audioBlob);
-
-    try {
-      const response = await fetch("/api/listen", {
-        method: "POST",
-        body: audioBlob, // Send the raw binary audio data
-        headers: {
-          "Content-Type": "application/octet-stream", // Indicate that raw binary data is being sent
-        },
-      });
-      const data = await response.json();
-      console.log("Transcription:", data.transcription);
-    } catch (error) {
-      console.error("Error sending audio to API:", error);
-    }
-  };
-
-  // Record audio function
-  const recordAudio = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-
-    let chunks = [];
-    mediaRecorder.ondataavailable = (event) => {
-      chunks.push(event.data);
-    };
-
-    mediaRecorder.onstop = async () => {
-      const audioBlob = new Blob(chunks, { type: "audio/wav" });
-      sendAudioToAPI(audioBlob);
-    };
-
-    mediaRecorder.start();
-    setTimeout(() => mediaRecorder.stop(), 5000); // Record for 5 seconds
-  };
-
-  // Toggle microphone
   const toggleMic = () => {
     const audioTrack = localStreamRef.current?.getAudioTracks()[0];
     if (audioTrack) {
@@ -231,7 +236,6 @@ export default function Call() {
     }
   };
 
-  // Toggle remote audio
   const toggleAudio = () => {
     const remoteAudioTrack = peerConnectionRef.current
       .getReceivers()
@@ -246,6 +250,36 @@ export default function Call() {
     navigator.clipboard.writeText(callId);
   };
 
+  const monitorAudioLevel = () => {
+    console.log("Monitoring and updating audio levels...");
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(localStreamRef.current);
+    source.connect(analyser);
+    analyser.fftSize = 256;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const updateAudioLevel = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+      setAudioLevel(average);
+
+      if (average < 10) {
+        console.log("Silence detected, sending audio chunks...");
+        detectSilenceAndSendAudio();
+      } else {
+        console.log("Sound detected, average:", average);
+      }
+
+      requestAnimationFrame(updateAudioLevel);
+    };
+
+    updateAudioLevel();
+  };
+
   return (
     <Box
       display="flex"
@@ -255,7 +289,7 @@ export default function Call() {
       alignItems="center"
       justifyContent="center"
     >
-      <Typography variant="h4">Audio Call</Typography>
+      <Typography variant="h4">Audio Call Preview</Typography>
 
       <Box mt={2} display="flex" alignItems="center">
         <IconButton
@@ -303,9 +337,6 @@ export default function Call() {
         <TextField inputRef={callInputRef} placeholder="Enter Call ID" />
         <Button variant="contained" color="primary" onClick={answerCall}>
           Answer Call
-        </Button>
-        <Button variant="contained" color="primary" onClick={recordAudio}>
-          Record and Transcribe Audio
         </Button>
       </Box>
 

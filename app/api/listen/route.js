@@ -1,11 +1,9 @@
 import { SpeechClient } from "@google-cloud/speech";
 import { NextResponse } from "next/server";
 
-// Initialize the Google Cloud Speech client
 const speechClient = new SpeechClient({
   timeout: 10000,
 });
-
 
 export const config = {
   api: {
@@ -32,12 +30,11 @@ export async function POST(req) {
     };
 
     const config = {
-      encoding: "WEBM_OPUS", // or "WEBM_OPUS" based on your format
+      encoding: "WEBM_OPUS",
       sampleRateHertz: 48000,
       languageCode: "en-US",
       enableAutomaticPunctuation: true,
     };
-    
 
     const request = {
       audio,
@@ -45,7 +42,6 @@ export async function POST(req) {
     };
 
     console.log("Sending audio to Speech-to-Text API...");
-
     const [response] = await speechClient.recognize(request);
 
     console.log("Response received:", response);
