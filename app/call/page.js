@@ -23,18 +23,19 @@ export default function Call() {
   const remoteStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const callInputRef = useRef(null);
   const recorderRef = useRef(null);
   const audioBufferTimeoutRef = useRef(null);
+  const callInputRef = useRef(null);
 
   const [micEnabled, setMicEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [audioLevel, setAudioLevel] = useState(0);
   const [callId, setCallId] = useState("");
   const [callCreated, setCallCreated] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
-    // Ensure MediaStream is only accessed in the browser
     if (typeof window !== "undefined") {
       remoteStreamRef.current = new MediaStream();
     }
@@ -74,6 +75,7 @@ export default function Call() {
       console.log("Audio stream started successfully");
       monitorAudioLevel();
       recordAudio();
+      setIsRecording(true);
     } catch (error) {
       console.error("Error accessing microphone:", error);
     }
@@ -89,15 +91,14 @@ export default function Call() {
       if (event.data.size > 0) {
         audioChunksRef.current.push(event.data);
         console.log("Audio chunk size:", event.data.size);
+        sendAudioToAPI(audioChunksRef.current);
       }
     };
 
-    recorderRef.current.start(5000);
+    recorderRef.current.start(1000);
   };
 
   const sendAudioToAPI = async (audioChunks) => {
-    console.log("Preparing to send audio to API...");
-
     if (audioChunks.length === 0) {
       console.error("No audio data to send");
       return;
@@ -106,17 +107,9 @@ export default function Call() {
     const blob = new Blob(audioChunks, { type: "audio/webm" });
     const audioBuffer = await blob.arrayBuffer();
 
-    console.log("Blob size:", blob.size);
-    console.log("Audio buffer byteLength:", audioBuffer.byteLength);
-
-    if (audioBuffer.byteLength === 0) {
-      console.error("Audio buffer is empty");
-      return;
-    }
+    console.log("Sending audio to API, buffer size:", audioBuffer.byteLength);
 
     try {
-      console.log("Sending audio to API, buffer size:", audioBuffer.byteLength);
-
       const response = await fetch("/api/listen", {
         method: "POST",
         headers: { "Content-Type": "audio/webm" },
@@ -124,28 +117,36 @@ export default function Call() {
       });
 
       const { transcription } = await response.json();
-      console.log("Transcription received:", transcription);
+      console.log(
+        "Transcription received:",
+        transcription || "No transcription available"
+      );
     } catch (error) {
       console.error("Error sending audio to API:", error);
     }
   };
 
-  const detectSilenceAndSendAudio = () => {
-    if (audioBufferTimeoutRef.current) {
-      clearTimeout(audioBufferTimeoutRef.current);
-    }
+  const monitorAudioLevel = () => {
+    console.log("Monitoring and updating audio levels...");
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(localStreamRef.current);
+    source.connect(analyser);
+    analyser.fftSize = 256;
 
-    audioBufferTimeoutRef.current = setTimeout(() => {
-      console.log("Checking audio chunks before sending...");
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
 
-      if (audioChunksRef.current.length > 0) {
-        console.log("Audio chunks available:", audioChunksRef.current.length);
-        sendAudioToAPI([...audioChunksRef.current]);
-        audioChunksRef.current = [];
-      } else {
-        console.log("No audio chunks available, skipping API call");
-      }
-    }, 1000);
+    const updateAudioLevel = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+      setAudioLevel(average);
+
+      requestAnimationFrame(updateAudioLevel);
+    };
+
+    updateAudioLevel();
   };
 
   const createOffer = async () => {
@@ -250,35 +251,15 @@ export default function Call() {
     navigator.clipboard.writeText(callId);
   };
 
-  const monitorAudioLevel = () => {
-    console.log("Monitoring and updating audio levels...");
-    const audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
-    const analyser = audioContext.createAnalyser();
-    const source = audioContext.createMediaStreamSource(localStreamRef.current);
-    source.connect(analyser);
-    analyser.fftSize = 256;
+  useEffect(() => {
+    if (isRecording) {
+      const interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
 
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    const updateAudioLevel = () => {
-      analyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-      setAudioLevel(average);
-
-      if (average < 10) {
-        console.log("Silence detected, sending audio chunks...");
-        detectSilenceAndSendAudio();
-      } else {
-        console.log("Sound detected, average:", average);
-      }
-
-      requestAnimationFrame(updateAudioLevel);
-    };
-
-    updateAudioLevel();
-  };
+      return () => clearInterval(interval);
+    }
+  }, [isRecording]);
 
   return (
     <Box
@@ -304,6 +285,7 @@ export default function Call() {
         >
           {audioEnabled ? <VolumeUpIcon /> : <VolumeOffIcon />}
         </IconButton>
+
         <Box
           width="100px"
           height="10px"
@@ -322,6 +304,14 @@ export default function Call() {
           />
         </Box>
       </Box>
+      
+      {isRecording && (
+        <Typography variant="h6" mt={2}>
+          Call Duration: {Math.floor(callDuration / 60)}:
+          {callDuration % 60 < 10 ? "0" : ""}
+          {callDuration % 60} minutes
+        </Typography>
+      )}
 
       <Box
         display="flex"
