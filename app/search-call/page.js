@@ -3,7 +3,7 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
-import { Typography } from "@mui/material";
+import { Typography } from '@mui/material';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -13,19 +13,19 @@ import StarIcon from '@mui/icons-material/Star';
 
 export default function FormPropsTextFields() {
   const [userList, setUserList] = useState([]);
-  const [loading, setLoading] = useState(true); // Add loading state for debugging
-  const [error, setError] = useState(null);     // Add error state for debugging
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Fetch user list from your Next.js API route
     async function fetchUsers() {
       try {
         const response = await fetch('/api/fetch-users');
+        if (!response.ok) throw new Error('Failed to fetch users');
         const users = await response.json();
-        console.log("Fetched users: ", users); // Debug: log users
         setUserList(users);
       } catch (error) {
-        console.error('Failed to fetch users:', error); // Debug: log error
+        console.error('Failed to fetch users:', error);
         setError(error);
       } finally {
         setLoading(false);
@@ -47,14 +47,13 @@ export default function FormPropsTextFields() {
       flexDirection="column"
       minHeight="100vh"
     >
-      {/* Form Header and Search Field */}
       <Box
         sx={{
-          width: '100%', // Ensures full width
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          alignItems: 'center', // Centers horizontally
+          alignItems: 'center',
         }}
       >
         <Typography variant="h2">Start a Conversation</Typography>
@@ -65,28 +64,21 @@ export default function FormPropsTextFields() {
           id="outlined-search"
           label="Search User"
           type="search"
-          sx={{ width: '25ch', mt: 2 }} // Adjusts the width of the TextField and adds margin-top
+          sx={{ width: '25ch', mt: 2 }}
         />
       </Box>
 
-      {/* User List */}
       {loading && <Typography variant="h6">Loading users...</Typography>}
       {error && <Typography variant="h6" color="error">Error loading users: {error.message}</Typography>}
 
-      <List
-        sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}
-        aria-label="contacts"
-      >
+      <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }} aria-label="contacts">
         {userList.map((user) => (
-          <ListItem 
-            key={user.id} 
-            sx={{ border: '1px solid #ddd', borderRadius: '4px', mb: 1 }}
-          >
+          <ListItem key={user.id} sx={{ border: '1px solid #ddd', borderRadius: '4px', mb: 1 }}>
             <ListItemButton>
               <ListItemIcon>
                 <StarIcon />
               </ListItemIcon>
-              <ListItemText primary={user.firstName + ' ' + user.lastName} />
+              <ListItemText primary={`${user.firstName} ${user.lastName}`} />
             </ListItemButton>
           </ListItem>
         ))}
