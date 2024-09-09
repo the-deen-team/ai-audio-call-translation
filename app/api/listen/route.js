@@ -1,7 +1,6 @@
 import { SpeechClient } from "@google-cloud/speech";
 import { NextResponse } from "next/server";
 
-// Initialize the Google Cloud Speech client
 const speechClient = new SpeechClient({
   timeout: 10000,
 });
@@ -14,49 +13,69 @@ export const config = {
 
 export async function POST(req) {
   try {
-    // Create the audio stream for streamingRecognize
-    const audioStream = req.body;
+    const chunks = [];
 
-    // Speech-to-Text streaming recognition config
-    const request = {
-      config: {
-        encoding: "WEBM_OPUS",
-        sampleRateHertz: 48000,
-        languageCode: "en-US",
-        enableAutomaticPunctuation: true,
-      },
-      interimResults: false, // If you want interim results, set this to true
-    };
-
-    // Create the recognize stream
-    const recognizeStream = speechClient
-      .streamingRecognize(request)
-      .on("error", (error) => {
-        console.error("Speech-to-Text error:", error);
-      })
-      .on("data", (data) => {
-        if (data.results[0] && data.results[0].alternatives[0]) {
-          const transcription = data.results
-            .map((result) => result.alternatives[0].transcript)
-            .join("\n");
-
-          console.log("Transcription:", transcription);
-        } else {
-          console.log("No transcription available");
-        }
-      });
-
-    // Send the audio data to the Google API
-    for await (const chunk of audioStream) {
-      recognizeStream.write(chunk);
+    for await (const chunk of req.body) {
+      chunks.push(chunk);
     }
 
-    // End the stream when all the audio has been sent
-    recognizeStream.end();
+    const audioBuffer = Buffer.concat(chunks);
 
-    return NextResponse.json({ message: "Audio sent successfully" });
+    console.log("Audio buffer size:", audioBuffer.length);
+
+    const audioBytes = audioBuffer.toString("base64");
+
+    // Get MIME type from the request headers
+    const contentType = req.headers.get("content-type") || "";
+    console.log("contentType", contentType);
+    let encoding;
+
+    // Dynamically choose the encoding based on the content type
+    if (contentType.includes("audio/webm")) {
+      encoding = "WEBM_OPUS";
+    } else if (contentType.includes("audio/ogg")) {
+      encoding = "OGG_OPUS";
+    } else if (contentType.includes("audio/mp4")) {
+      encoding = "MP4";
+    } else {
+      console.error("Unsupported audio format");
+      return NextResponse.json({ error: "Unsupported audio format" });
+    }
+
+    console.log("encoding", encoding);
+    const audio = {
+      content: audioBytes,
+    };
+
+    const config = {
+      encoding: encoding,
+      sampleRateHertz: 48000, // Adjust sample rate if necessary
+      languageCode: "en-US",
+      enableAutomaticPunctuation: true,
+    };
+
+    const request = {
+      audio,
+      config,
+    };
+
+    console.log("Sending audio to Speech-to-Text API...");
+    const [response] = await speechClient.recognize(request);
+
+    if (response.results.length === 0) {
+      console.log("No transcription available");
+      return NextResponse.json({ transcription: "No transcription available" });
+    }
+
+    const transcription = response.results
+      .map((result) => result.alternatives[0].transcript)
+      .join("\n");
+
+    console.log("Transcription:", transcription);
+
+    return NextResponse.json({ transcription });
   } catch (error) {
-    console.error("Streaming recognize error:", error);
-    return NextResponse.json({ error: "Speech-to-Text streaming failed" });
+    console.error("Speech-to-Text error:", error);
+    return NextResponse.json({ error: "Speech-to-Text failed" });
   }
 }
