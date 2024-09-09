@@ -15,7 +15,7 @@ export default function Home() {
       {/* Header */}
       <header className="bg-blue-600 w-full">
         <nav className="container mx-auto p-4 flex justify-between items-center">
-          <h1 className="text-white text-lg font-bold">Lingo AI</h1>
+          <h1 className="text-white text-lg font-bold">LingoBridge AI</h1>
           <div className="flex gap-4">
             <Link href="/sign-in" className="text-white hover:underline">
               Login
@@ -34,7 +34,7 @@ export default function Home() {
           {/* Left: Text Section */}
           <div className="flex flex-col items-start gap-4 max-w-lg">
             <h2 className="text-4xl font-bold text-left">
-              Speak In Any Language And Let Lingo AI Do The Rest
+              Speak In Any Language And Let LingoBridge AI Do The Rest
             </h2>
             <p className="text-gray-600">
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut
