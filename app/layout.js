@@ -4,6 +4,9 @@
 
 import { ClerkProvider } from '@clerk/nextjs';
 import { SWRConfig } from 'swr';
+import { JetBrains_Mono } from "next/font/google";
+import "./globals.css";
+// import Header from "@/components/Header";
 
 export default function RootLayout({ children }) {
   return (
