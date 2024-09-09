@@ -1,6 +1,4 @@
-
-"use client";
-
+'use client';
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
@@ -13,35 +11,17 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import StarIcon from '@mui/icons-material/Star';
 
-import * as dotenv from 'dotenv'
-
-dotenv.config()
-//import { Clerk } from '@clerk/clerk-sdk-node';
-
-
-//import { clerkClient } from '@clerk/clerk-sdk-node'; // Import the client directly
-//const finder = clerkClient(process.env.CLERK_SECRET_KEY);
-//const Clerk = require('@clerk/clerk-sdk-node').Clerk;
-//const clerkClient = new Clerk({ apiKey: process.env.CLERK_SECRET_KEY });
-
-import { createClerkClient } from '@clerk/clerk-sdk-node'
-
-const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
-
-
 export default function FormPropsTextFields() {
   const [userList, setUserList] = useState([]);
   const [loading, setLoading] = useState(true); // Add loading state for debugging
   const [error, setError] = useState(null);     // Add error state for debugging
 
   useEffect(() => {
-    // Fetch user list from Clerk
+    // Fetch user list from your Next.js API route
     async function fetchUsers() {
       try {
-        const users = await clerkClient.users.getUserList({
-          limit: 10,
-          orderBy: '-created_at',
-        });
+        const response = await fetch('/api/fetch-users');
+        const users = await response.json();
         console.log("Fetched users: ", users); // Debug: log users
         setUserList(users);
       } catch (error) {
